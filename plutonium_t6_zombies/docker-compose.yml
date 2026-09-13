@@ -5,15 +5,16 @@ services:
     restart: unless-stopped
     ports:
       - "4976:4976/udp"   # game server port (host:guest/udp) - must match SERVER_PORT
+      - "4976:4976/tcp"   # RCON (Source/TCP) on the same port - used by switch-map.py
       - "1624:1624/tcp"   # admin panel port (host:guest/tcp) - must match ADMIN_PORT
     volumes:
-      - /mnt/ssd/config/aio-plutonium-t6/plutonium:/t6server/plutonium
-      - /mnt/ssd/config/aio-plutonium-t6/server/pluto_t6_full_game:/t6server/game_files:ro
-      - /mnt/ssd/config/aio-plutonium-t6/server_data:/t6server/server
-      - /mnt/ssd/config/aio-plutonium-t6/admin:/t6server/admin
-      - /mnt/ssd/config/aio-plutonium-t6/updater:/t6server/updater
-      - /mnt/ssd/config/aio-plutonium-t6/downloaded_files:/t6server/downloaded_files
-      - /mnt/ssd/config/aio-plutonium-t6/status:/t6server/status
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/plutonium:/t6server/plutonium
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/server/pluto_t6_full_game:/t6server/game_files:ro
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/server_data:/t6server/server
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/admin:/t6server/admin
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/updater:/t6server/updater
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/downloaded_files:/t6server/downloaded_files
+      - /mnt/ssd/config/aio-plutonium-t6/aio-plutonium-t6/status:/t6server/status
     environment:
       # --- Online mode settings ---
       SERVER_KEY: "${SERVER_KEY}"                    # required for online mode, get it from https://plutonium.pw
@@ -29,3 +30,4 @@ services:
 
       # --- LAN mode only (uncomment/set if LAN_MODE is "true") ---
       # SERVER_MAP_ROTATION: "${SERVER_MAP_ROTATION}"
+

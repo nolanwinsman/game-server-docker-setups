@@ -45,13 +45,18 @@ docker compose up -d
 ### Map switching (live, from any machine)
 
 The included helper script lets you switch maps on a running server via RCON
-without SSH or Docker access:
+without SSH or Docker access. It tries Source RCON (TCP) then Quake3-style
+UDP automatically, so it works regardless of how Plutonium responds.
 
 ```bash
-./plutonium_t6_zombies/switch-map.sh
+cd plutonium_t6_zombies
+./switch-map.sh
 ```
 
-See `plutonium_t6_zombies/switch-map.sh` for the full map table.
+Config lives in `.env` next to the script or in `maps.json` / `maps.yaml` (see
+`maps.example.json` for the format). To add modded maps, either append them to
+`EXTRA_MAPS` in `.env` (inline JSON) or drop a `maps.json` next to the
+script.
 
 ## Adding a new game server
 
@@ -76,7 +81,9 @@ helper/
 plutonium_t6_zombies/
   docker-compose.yml          # generated — do not edit manually
   server-launch.sh            # reference copy of the fork's patched launch script (baked into the image)
-  switch-map.sh               # interactive RCON-based map switcher
+  switch-map.sh               # wrapper; the real logic lives in switch-map.py
+  switch-map.py               # interactive RCON-based map switcher (Source RCON + Q3/UDP)
+  maps.example.json           # example of how to add modded maps
   CHANGES.md                  # changelog of fixes vs upstream image
 ```
 

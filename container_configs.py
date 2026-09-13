@@ -26,6 +26,7 @@ class GameContainerConfig:
             "    restart: unless-stopped\n"
             "    ports:\n"
             '      - "4976:4976/udp"   # game server port (host:guest/udp) - must match SERVER_PORT\n'
+            '      - "4976:4976/tcp"   # RCON (Source/TCP) on the same port - used by switch-map.py\n'
             '      - "1624:1624/tcp"   # admin panel port (host:guest/tcp) - must match ADMIN_PORT\n'
             "    volumes:\n"
             f"      - {cfg}/plutonium:/t6server/plutonium\n"
