@@ -1,6 +1,7 @@
-# Local environment files (contain secrets/tokens)
+# Local environment files (contain secrets/tokens); keep example.env tracked
 .env
 **/.env
+!example.env
 
 # Python
 __pycache__/

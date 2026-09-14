@@ -1,6 +1,8 @@
 import os
 import subprocess
 
+from container_configs import SATISFACTORY_GID, SATISFACTORY_UID
+
 
 # -----------------------------
 # Helpers
@@ -138,3 +140,19 @@ class GameServerSetup:
         run(["sudo", "chown", "-R", "plutonium-t6:game-servers", base])
 
         print(f"[INFO] Drop your merged game files (base + DLCs) into: {base}/server/pluto_t6_full_game")
+
+    def satisfactory_server(self):
+        # Dedicated non-root user/group for the container (baked into the local
+        # image via UID/GID build args and used by the `user:` directive).
+        ensure_user("satisfactory-server", SATISFACTORY_UID)
+        ensure_group("satisfactory-server", SATISFACTORY_GID)
+
+        base = f"{self.root_dir}/satisfactory-server"
+
+        run(["sudo", "mkdir", "-pv", "-m", "775", base])
+
+        # Non-root container writes straight to /config; it must already be owned
+        # by the container's UID/GID (init.sh only chowns when running as root).
+        run(["sudo", "chown", "-R", f"{SATISFACTORY_UID}:{SATISFACTORY_GID}", base])
+
+        print(f"[INFO] Satisfactory saves/blueprints/config live in: {base}")

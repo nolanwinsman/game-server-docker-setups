@@ -7,11 +7,11 @@
 # netcat required.
 #
 # Usage:
-#   ./switch-map.py
+#   ./switch-map.sh        (from the helper/ folder - or call switch-map.sh from anywhere)
 #
 # Config (any of):
 #   - SERVER_IP / SERVER_PORT env vars
-#   - .env next to this script (reuses your docker-compose .env):
+#   - .env at the repo root (shared by every game's docker-compose and reused here):
 #       SERVER_IP=...
 #       SERVER_PORT=4976
 #       SERVER_RCON_PASSWORD=...
@@ -30,7 +30,8 @@ import struct
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ENV_FILE = os.path.join(SCRIPT_DIR, ".env")
+GAME_DIR = os.path.dirname(SCRIPT_DIR)          # helper/ -> game folder
+ENV_FILE = os.path.join(GAME_DIR, "..", ".env")  # shared repo-root .env
 
 DEFAULT_MAPS = [
     {"label": "TranZit (Classic)", "gametype": "zm_classic_transit.cfg", "map": "zm_transit"},
