@@ -194,6 +194,33 @@ def q3_rcon(ip, port, password, cmd, iw_trailer, timeout=2.0):
         s.close()
 
 
+def screen_send(container, cmd, screen="plutonium-server", logfile="/t6server/status/plutonium-server.log"):
+    """Inject a command into the game's local console via the container's screen
+    session (bypasses RCON entirely - works even if rcon_password is unset)."""
+    payload = cmd + "\r"
+    inner = (
+        f"screen -S {screen} -X stuff {shlex.quote(payload)}; "
+        f"sleep 3; "
+        f"tail -n 40 {logfile} 2>/dev/null"
+    )
+    dbg(f"screen_send: exec {container} -> screen {screen}: {cmd!r}")
+    try:
+        out = subprocess.run(
+            ["docker", "exec", container, "bash", "-c", inner],
+            capture_output=True,
+            timeout=20,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return None, f"screen exec failed: {e}"
+    if out.returncode != 0 and not out.stdout:
+        return None, (
+            f"screen exec failed ({out.returncode}): "
+            f"{out.stderr.decode('utf-8', 'replace').strip()}"
+        )
+    tail = out.stdout.decode("utf-8", "replace").strip()
+    return (tail or "command injected; no log output yet"), None
+
+
 def docker_rcon(container, port, password, cmd, timeout=3):
     """Run RCON from inside the container via docker exec (bypasses host IP/firewall).
 
@@ -415,11 +442,17 @@ def main():
     print("")
 
     if container:
-        resp, err = docker_rcon(container, port, password, cmd)
+        resp, err = screen_send(container, cmd)
         if err:
-            print(f"[docker exec] ERROR: {err}")
+            print(f"[screen console] ERROR: {err}")
+            resp, err = docker_rcon(container, port, password, cmd)
+            if err:
+                print(f"[docker exec]   ERROR: {err}")
+            else:
+                print(f"[docker exec]   OK. Server response:")
+                print(resp)
         else:
-            print(f"[docker exec] OK. Server response:")
+            print(f"[screen console] OK. Game console log:")
             print(resp)
     else:
         ok, msg, method = rcon_send(ip, port, password, cmd)
