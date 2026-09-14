@@ -149,6 +149,11 @@ root_dir = take_directory_input("/mnt/ssd/config")
 # via env_file: ../.env. See example.env for the full template.
 ROOT_ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 
+# v2: one SEEDED-STOCK compose per game is depreciated - instead each
+# selected game's service block is appended below and merged into a SINGLE
+# repo-root docker-compose.yml after the loop (see container_configs.py).
+service_blocks = []
+
 for game_dir in requested:
     game_name = GAMES[game_dir]
     print(f"\n===SETTING UP {game_name}===")
@@ -167,10 +172,8 @@ for game_dir in requested:
 
     os.makedirs(game_dir, exist_ok=True)
 
-    with open(os.path.join(game_dir, "docker-compose.yml"), "w") as compose:
-        container_config = GameContainerConfig(root_dir)
-        compose.write(getattr(container_config, game_dir)())
-    print("docker-compose.yml generated successfully.")
+    service_blocks.append(getattr(GameContainerConfig(root_dir), game_dir)())
+    print(f"service block for {game_name} queued for the merged compose.")
 
     print(
         "Create the required groups, users and folder structure (required for first time setup) [Y/n]: ",
@@ -189,9 +192,16 @@ for game_dir in requested:
         print("Updates made to .env. Saving updates.")
         env.save()
 
+# Merge the queued service blocks into ONE repo-root docker-compose.yml.
+compose_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docker-compose.yml")
+with io.open(compose_path, "w", encoding="utf-8") as compose:
+    compose.write("services:\n" + "\n".join(service_blocks) + "\n")
+print("docker-compose.yml generated successfully (SINGLE repo-root file).")
+
 print("\nProcess complete! To start your servers:")
-for game_dir in requested:
-    print(f"  cd {game_dir} && docker compose up -d")
+print(
+    f"  cd {os.path.dirname(os.path.abspath(__file__))} && docker compose up -d"
+)
 print("\nHelper scripts:")
 print(
     "  plutonium_t6_zombies/helper/switch-map.sh   - interactive T6 Zombies map switcher (RCON)"
