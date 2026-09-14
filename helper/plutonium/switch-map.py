@@ -55,7 +55,11 @@ def load_env():
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
+                k = k.strip()
+                v = v.strip()
+                if " #" in v:
+                    v = v.split(" #", 1)[0].strip()
+                env[k] = v
     return env
 
 
