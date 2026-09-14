@@ -30,16 +30,36 @@ import struct
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-GAME_DIR = os.path.dirname(SCRIPT_DIR)          # helper/ -> game folder
+GAME_DIR = os.path.dirname(SCRIPT_DIR)  # helper/ -> game folder
 ENV_FILE = os.path.join(GAME_DIR, "..", ".env")  # shared repo-root .env
 
 DEFAULT_MAPS = [
-    {"label": "TranZit (Classic)", "gametype": "zm_classic_transit.cfg", "map": "zm_transit"},
-    {"label": "Die Rise (Classic)", "gametype": "zm_classic_rooftop.cfg", "map": "zm_highrise"},
-    {"label": "Mob of the Dead (Classic)", "gametype": "zm_classic_prison.cfg", "map": "zm_prison"},
-    {"label": "Buried (Classic)", "gametype": "zm_classic_processing.cfg", "map": "zm_buried"},
+    {
+        "label": "TranZit (Classic)",
+        "gametype": "zm_classic_transit.cfg",
+        "map": "zm_transit",
+    },
+    {
+        "label": "Die Rise (Classic)",
+        "gametype": "zm_classic_rooftop.cfg",
+        "map": "zm_highrise",
+    },
+    {
+        "label": "Mob of the Dead (Classic)",
+        "gametype": "zm_classic_prison.cfg",
+        "map": "zm_prison",
+    },
+    {
+        "label": "Buried (Classic)",
+        "gametype": "zm_classic_processing.cfg",
+        "map": "zm_buried",
+    },
     {"label": "Origins (Classic)", "gametype": "zm_classic_tomb.cfg", "map": "zm_tomb"},
-    {"label": "Nuketown Zombies (Standard)", "gametype": "zm_standard_nuked.cfg", "map": "zm_nuked"},
+    {
+        "label": "Nuketown Zombies (Standard)",
+        "gametype": "zm_standard_nuked.cfg",
+        "map": "zm_nuked",
+    },
 ]
 
 
@@ -86,7 +106,9 @@ def load_maps_file(path):
         except ImportError:
             print(f"NOTE: {path} is YAML but PyYAML is not installed.")
             print("      Install it with: python3 -m pip install pyyaml")
-            print("      ...or convert to JSON (maps.json) which needs no dependencies.")
+            print(
+                "      ...or convert to JSON (maps.json) which needs no dependencies."
+            )
             return []
         return normalize_maps(yaml.safe_load(open(path)))
     return normalize_maps(json.load(open(path)))
@@ -233,11 +255,19 @@ def rcon_send(ip, port, password, cmd):
         src = SourceRCON(ip, port, password)
         try:
             if not src.authenticate():
-                return (False, "RCON authentication failed - check SERVER_RCON_PASSWORD.", "Source RCON (TCP)")
+                return (
+                    False,
+                    "RCON authentication failed - check SERVER_RCON_PASSWORD.",
+                    "Source RCON (TCP)",
+                )
             reply = src.exec_command(cmd)
             if reply.strip():
                 return (True, reply, "Source RCON (TCP)")
-            return (True, "command sent; no textual response (this is normal for map swaps).", "Source RCON (TCP)")
+            return (
+                True,
+                "command sent; no textual response (this is normal for map swaps).",
+                "Source RCON (TCP)",
+            )
         finally:
             src.close()
     except socket.timeout:
@@ -248,18 +278,31 @@ def rcon_send(ip, port, password, cmd):
         pass
 
     # 2) Quake3-style UDP, IW engine trailer (Plutonium's native variant).
-    for iw_trailer, name in ((True, "Q3/UDP (IW trailer)"), (False, "Q3/UDP (classic)")):
+    for iw_trailer, name in (
+        (True, "Q3/UDP (IW trailer)"),
+        (False, "Q3/UDP (classic)"),
+    ):
         resp = q3_rcon(ip, port, password, cmd, iw_trailer=iw_trailer)
         if resp is not None:
             if "bad rconpassword" in resp.lower() or "no rcon password" in resp.lower():
-                return (False, "RCON authentication failed - check SERVER_RCON_PASSWORD.", name)
+                return (
+                    False,
+                    "RCON authentication failed - check SERVER_RCON_PASSWORD.",
+                    name,
+                )
             return (True, resp, name)
 
-    return (None, "No response from the server on UDP.\n"
-                 "  Possible causes:\n"
-                 "   1. The container is down, or the port map changed (check `docker ps`).\n"
-                 "   2. A firewall is dropping UDP {port} to the server host.\n"
-                 "   3. The game server is running but RCON is disabled (empty rcon_password).".format(port=port), "UDP")
+    return (
+        None,
+        "No response from the server on UDP.\n"
+        "  Possible causes:\n"
+        "   1. The container is down, or the port map changed (check `docker ps`).\n"
+        "   2. A firewall is dropping UDP {port} to the server host.\n"
+        "   3. The game server is running but RCON is disabled (empty rcon_password).".format(
+            port=port
+        ),
+        "UDP",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +314,8 @@ def main():
     ip = os.environ.get("SERVER_IP") or env.get("SERVER_IP") or "100.65.180.117"
     port = int(os.environ.get("SERVER_PORT") or env.get("SERVER_PORT") or "4976")
     password = os.environ.get("RCON_PASSWORD") or env.get("SERVER_RCON_PASSWORD") or ""
+
+    print(f"Password Loaded: {password}")
 
     maps = gather_maps(env)
     if not maps:
