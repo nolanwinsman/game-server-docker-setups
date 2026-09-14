@@ -25,8 +25,10 @@
 
 import json
 import os
+import shlex
 import socket
 import struct
+import subprocess
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -192,6 +194,37 @@ def q3_rcon(ip, port, password, cmd, iw_trailer, timeout=2.0):
         s.close()
 
 
+def docker_rcon(container, port, password, cmd, timeout=3):
+    """Run RCON from inside the container via docker exec (bypasses host IP/firewall).
+
+    Targets the container's own eth0 IP (the game binds that, not loopback),
+    so no SERVER_IP is needed on the host side. Returns (msg, str) or (None, err).
+    """
+    payload = b"\xff\xff\xff\xffrcon " + password.encode() + b" " + cmd.encode() + b"\x00\xe6\xea"
+    esc = shlex.quote("".join(f"\\x{b:02x}" for b in payload))
+    inner = (
+        f"IP=$(hostname -I | cut -d' ' -f1); "
+        f"exec 3<>/dev/udp/$IP/{port}; "
+        f"printf '%b' {esc} >&3; "
+        f"timeout {timeout} head -c 4096 <&3"
+    )
+    dbg(f"docker_rcon: exec {container} against $IP:{port}")
+    try:
+        out = subprocess.run(
+            ["docker", "exec", container, "bash", "-c", inner],
+            capture_output=True,
+            timeout=timeout + 5,
+        )
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return None, f"docker exec failed: {e}"
+    if out.returncode != 0:
+        return None, f"docker exec failed ({out.returncode}): {out.stderr.decode('utf-8', 'replace').strip()}"
+    if not out.stdout:
+        dbg("docker_rcon: no response inside container")
+        return None, "No response from the server even inside the container."
+    return out.stdout.decode("latin-1", "replace"), None
+
+
 class SourceRCON:
     """Source RCON protocol over TCP (the SRCDS-style handshake)."""
 
@@ -338,12 +371,15 @@ def main():
     ip = os.environ.get("SERVER_IP") or env.get("SERVER_IP") or "100.65.180.117"
     port = int(os.environ.get("SERVER_PORT") or env.get("SERVER_PORT") or "4976")
     password = os.environ.get("RCON_PASSWORD") or env.get("SERVER_RCON_PASSWORD") or ""
+    container = os.environ.get("RCON_CONTAINER") or env.get("RCON_CONTAINER") or ""
 
     dbg(f"env file: {ENV_FILE} (exists={os.path.exists(ENV_FILE)})")
     dbg(f"target: {ip}:{port}")
     dbg(f"SERVER_RCON_PASSWORD: set={bool(password)} len={len(password)}")
     if DEBUG and password:
         print(f"[DEBUG] password in use: {password!r}")
+    if container:
+        dbg(f"RCON_CONTAINER set: {container!r} - IP from host will be ignored")
 
     maps = gather_maps(env)
     if not maps:
@@ -378,15 +414,22 @@ def main():
     print(f"Command: {cmd}")
     print("")
 
-    ok, msg, method = rcon_send(ip, port, password, cmd)
-
-    if ok is None:
-        print(f"[{method}] {msg}")
-    elif ok:
-        print(f"[{method}] OK. Server response:")
-        print(msg)
+    if container:
+        resp, err = docker_rcon(container, port, password, cmd)
+        if err:
+            print(f"[docker exec] ERROR: {err}")
+        else:
+            print(f"[docker exec] OK. Server response:")
+            print(resp)
     else:
-        print(f"[{method}] ERROR: {msg}")
+        ok, msg, method = rcon_send(ip, port, password, cmd)
+        if ok is None:
+            print(f"[{method}] {msg}")
+        elif ok:
+            print(f"[{method}] OK. Server response:")
+            print(msg)
+        else:
+            print(f"[{method}] ERROR: {msg}")
 
     print("")
     print("If the map changed successfully, give it a few seconds to load fastfiles.")
