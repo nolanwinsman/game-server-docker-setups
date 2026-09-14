@@ -23,7 +23,7 @@ class GameContainerConfig:
         cfg = f"{self.root_dir}/aio-plutonium-t6"
         return f"""\
   aio-plutonium-t6-server:
-    image: ghcr.io/nolanwinsman/aio-plutonium-t6-server:latest
+    image: ghcr.io/nolanwinsman/aio-plutonium-t6:latest
     container_name: aio-plutonium-t6-server
     restart: unless-stopped
     ports:
