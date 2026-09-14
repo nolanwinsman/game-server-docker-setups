@@ -30,8 +30,15 @@ import struct
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-GAME_DIR = os.path.dirname(SCRIPT_DIR)  # helper/ -> game folder
+GAME_DIR = os.path.dirname(SCRIPT_DIR)          # helper/ -> game folder
 ENV_FILE = os.path.join(GAME_DIR, "..", ".env")  # shared repo-root .env
+
+DEBUG = os.environ.get("SWITCH_MAP_DEBUG", "") == "1"
+
+
+def dbg(msg):
+    if DEBUG:
+        print(f"[DEBUG] {msg}")
 
 DEFAULT_MAPS = [
     {
@@ -68,18 +75,28 @@ DEFAULT_MAPS = [
 # ---------------------------------------------------------------------------
 def load_env():
     env = {}
-    if os.path.exists(ENV_FILE):
-        with open(ENV_FILE, "r", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                k = k.strip()
-                v = v.strip()
-                if " #" in v:
-                    v = v.split(" #", 1)[0].strip()
-                env[k] = v
+    dbg(f"looking for .env at: {ENV_FILE}")
+    if not os.path.exists(ENV_FILE):
+        dbg("MISSING: .env file not found")
+        return env
+    dbg("FOUND .env file")
+    with open(ENV_FILE, "r", errors="replace") as f:
+        for line_no, line in enumerate(f, 1):
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                if DEBUG and line and not line.startswith("#"):
+                    dbg(f"skip line {line_no} (no '='): {line!r}")
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip()
+            if " #" in v:
+                v = v.split(" #", 1)[0].strip()
+            env[k] = v
+            if DEBUG and any(w in k.upper() for w in ("PASSWORD", "SECRET", "TOKEN", "KEY")):
+                dbg(f"parsed {k}: <set len={len(v)}>")
+            else:
+                dbg(f"parsed {k}={v!r}")
     return env
 
 
@@ -252,9 +269,11 @@ def rcon_send(ip, port, password, cmd):
     """
     # 1) Source RCON over TCP (what IW4M-Admin and most tools speak).
     try:
+        dbg(f"attempting Source RCON (TCP) on {ip}:{port}")
         src = SourceRCON(ip, port, password)
         try:
             if not src.authenticate():
+                dbg("Source RCON (TCP): auth failed")
                 return (
                     False,
                     "RCON authentication failed - check SERVER_RCON_PASSWORD.",
@@ -262,7 +281,9 @@ def rcon_send(ip, port, password, cmd):
                 )
             reply = src.exec_command(cmd)
             if reply.strip():
+                dbg("Source RCON (TCP): command accepted")
                 return (True, reply, "Source RCON (TCP)")
+            dbg("Source RCON (TCP): command sent (no text response)")
             return (
                 True,
                 "command sent; no textual response (this is normal for map swaps).",
@@ -271,19 +292,21 @@ def rcon_send(ip, port, password, cmd):
         finally:
             src.close()
     except socket.timeout:
-        pass
+        dbg("Source RCON (TCP): timed out while handshaking")
     except ConnectionRefusedError:
-        pass
+        dbg("Source RCON (TCP): connection refused (nothing listening on TCP)")
     except (OSError, ValueError, EOFError, struct.error) as e:
-        pass
+        dbg(f"Source RCON (TCP): {type(e).__name__}: {e}")
 
     # 2) Quake3-style UDP, IW engine trailer (Plutonium's native variant).
     for iw_trailer, name in (
         (True, "Q3/UDP (IW trailer)"),
         (False, "Q3/UDP (classic)"),
     ):
+        dbg(f"attempting {name} on {ip}:{port}")
         resp = q3_rcon(ip, port, password, cmd, iw_trailer=iw_trailer)
         if resp is not None:
+            dbg(f"{name}: got response: {resp[:80]!r}")
             if "bad rconpassword" in resp.lower() or "no rcon password" in resp.lower():
                 return (
                     False,
@@ -291,6 +314,7 @@ def rcon_send(ip, port, password, cmd):
                     name,
                 )
             return (True, resp, name)
+        dbg(f"{name}: no response (timeout)")
 
     return (
         None,
@@ -315,7 +339,11 @@ def main():
     port = int(os.environ.get("SERVER_PORT") or env.get("SERVER_PORT") or "4976")
     password = os.environ.get("RCON_PASSWORD") or env.get("SERVER_RCON_PASSWORD") or ""
 
-    print(f"Password Loaded: {password}")
+    dbg(f"env file: {ENV_FILE} (exists={os.path.exists(ENV_FILE)})")
+    dbg(f"target: {ip}:{port}")
+    dbg(f"SERVER_RCON_PASSWORD: set={bool(password)} len={len(password)}")
+    if DEBUG and password:
+        print(f"[DEBUG] password in use: {password!r}")
 
     maps = gather_maps(env)
     if not maps:
