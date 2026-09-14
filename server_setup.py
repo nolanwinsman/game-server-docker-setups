@@ -1,7 +1,9 @@
 import os
 import subprocess
 
-from container_configs import SATISFACTORY_GID, SATISFACTORY_UID
+# Satisfactory uses the STOCK wolveix image (PUID/PGID=1000 from the shared
+# repo-root .env); no host user/group is created - the container manages
+# permissions itself via PUID/PGID. See example.env.
 
 
 # -----------------------------
@@ -142,10 +144,9 @@ class GameServerSetup:
         print(f"[INFO] Drop your merged game files (base + DLCs) into: {base}/server/pluto_t6_full_game")
 
     def satisfactory_server(self):
-        # Dedicated non-root user/group for the container (baked into the local
-        # image via UID/GID build args and used by the `user:` directive).
-        ensure_user("satisfactory-server", SATISFACTORY_UID)
-        ensure_group("satisfactory-server", SATISFACTORY_GID)
+        # STOCK wolveix image: the container daemonizes as PUID:PGID (default
+        # 1000:1000, overridable via PUID/PGID in the repo-root .env). No host
+        # user/group is created; the image handles ownership of /config itself.
 
         base = f"{self.root_dir}/satisfactory-server"
 
@@ -153,6 +154,8 @@ class GameServerSetup:
 
         # Non-root container writes straight to /config; it must already be owned
         # by the container's UID/GID (init.sh only chowns when running as root).
-        run(["sudo", "chown", "-R", f"{SATISFACTORY_UID}:{SATISFACTORY_GID}", base])
+        # Stock image writes to /config as PUID:PGID (1000:1000 default) - host
+        # just needs this folder to exist; ownership is handled inside the container.
+
 
         print(f"[INFO] Satisfactory saves/blueprints/config live in: {base}")
