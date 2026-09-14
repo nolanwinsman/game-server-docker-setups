@@ -165,6 +165,8 @@ for game_dir in requested:
             "Skipping .env file. Make sure the variables exist or docker compose will warn."
         )
 
+    os.makedirs(game_dir, exist_ok=True)
+
     with open(os.path.join(game_dir, "docker-compose.yml"), "w") as compose:
         container_config = GameContainerConfig(root_dir)
         compose.write(getattr(container_config, game_dir)())
