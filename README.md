@@ -45,21 +45,11 @@ docker compose up -d
    server configs, runs the Plutonium updater, downloads IW4M-Admin, and
    configures Wine.
 
-### Map switching (live, from any machine)
+### Changing maps (live, from inside the game)
 
-The included helper script lets you switch maps on a running server via RCON
-without SSH or Docker access. It tries Source RCON (TCP) then Quake3-style
-UDP automatically, so it works regardless of how Plutonium responds.
-
-```bash
-cd plutonium_t6_zombies/helper
-./switch-map.sh
-```
-
-Config lives in the shared repo-root `.env` (see `example.env` for the format)
-or in `maps.json` / `maps.yaml` next to the script (see `maps.example.json`).
-To add modded maps, append them to `EXTRA_MAPS` in `.env` (inline JSON) or
-drop a `maps.json` in the `helper/` folder.
+No scripts or SSH needed — open the in-game console with `~` and use RCON.
+See **[`docs/plutonium-t6-rcon.md`](docs/plutonium-t6-rcon.md)** for RCON
+login and the full map-reference table.
 
 ## Adding a new game server
 
@@ -83,13 +73,11 @@ example.env                  # template for .env - copy it or run main.py
 helper/
   __init__.py
   EnvManager.py               # env file reader/writer (shared with ezarr)
+docs/
+  plutonium-t6-rcon.md        # RCON login + map changes via the in-game console (~)
 plutonium_t6_zombies/
   docker-compose.yml          # generated — do not edit manually
   server-launch.sh            # reference copy of the fork's patched launch script (baked into the image)
-  helper/
-    switch-map.sh             # wrapper; the real logic lives in switch-map.py
-    switch-map.py             # interactive RCON-based map switcher (Source RCON + Q3/UDP)
-    maps.example.json         # example of how to add modded maps
   CHANGES.md                  # changelog of fixes vs upstream image
 satisfactory_server/
   docker-compose.yml          # generated — do not edit manually

@@ -203,10 +203,8 @@ print("\nProcess complete! To start your servers:")
 print(
     f"  cd {os.path.dirname(os.path.abspath(__file__))} && docker compose up -d"
 )
-print("\nHelper scripts:")
-print(
-    "  plutonium_t6_zombies/helper/switch-map.sh   - interactive T6 Zombies map switcher (RCON)"
-)
+print("\nAdmin docs:")
+print("  docs/plutonium-t6-rcon.md   - RCON login + map changes via the in-game console (~)")
 print(
     "Thank you for using the Game Server Setup CLI. If you experience any issues, open an issue."
 )
