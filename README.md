@@ -41,7 +41,9 @@ docker compose up -d
    ```
    This folder is mounted read-only into the container at `/t6server/game_files`.
 5. `cd plutonium_t6_zombies && docker compose up -d`
-6. First boot will take a few minutes while it copies game files, downloads
+6. On a fresh host, log in to GHCR first to pull the **private** image — see
+   [`docs/docker-registry-login.md`](docs/docker-registry-login.md).
+7. First boot will take a few minutes while it copies game files, downloads
    server configs, runs the Plutonium updater, downloads IW4M-Admin, and
    configures Wine.
 
@@ -75,6 +77,7 @@ helper/
   EnvManager.py               # env file reader/writer (shared with ezarr)
 docs/
   plutonium-t6-rcon.md        # RCON login + map changes via the in-game console (~)
+  docker-registry-login.md    # one-time GHCR login to pull the private image
 plutonium_t6_zombies/
   docker-compose.yml          # generated — do not edit manually
   server-launch.sh            # reference copy of the fork's patched launch script (baked into the image)

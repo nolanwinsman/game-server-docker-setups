@@ -78,6 +78,8 @@ def configure_plutonium_t6_zombies_env(env):
             prompt="RCON password (blank = default 'admin')",
             optional=True,
         )
+        if not env.env.get("SERVER_RCON_PASSWORD"):
+            env_default(env, "SERVER_RCON_PASSWORD", "admin")
         env.require(
             "SERVER_PASSWORD", prompt="Server password (blank = none)", optional=True
         )
